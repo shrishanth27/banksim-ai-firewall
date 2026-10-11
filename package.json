@@ -1,0 +1,33 @@
+{
+  "name": "banksim-ai-firewall",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "BankSim: Blue-Team AI Firewall for FinTech & AI Security",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "server": "node server/index.js",
+    "client": "npm run dev --prefix client",
+    "dev": "node server/index.js",
+    "build:client": "npm install --prefix client && npm run build --prefix client",
+    "build": "npm install --prefix client && npm run build --prefix client",
+    "test": "node --test tests/*.test.js"
+  },
+  "keywords": [
+    "ai-firewall",
+    "fintech-security",
+    "blue-team",
+    "prompt-injection",
+    "banksim"
+  ],
+  "author": "BankSim Blue Team",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0"
+  }
+}

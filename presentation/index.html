@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BankSim: Blue-Team AI Firewall | Hackathon Presentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #070e22;
+      --card-bg: #0d1a3a;
+      --border: #1a2f66;
+      --cyan: #00e5ff;
+      --green: #10b981;
+      --red: #f43f5e;
+      --amber: #f59e0b;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+    header {
+      padding: 1rem 2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0a1430;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.1rem; }
+    .logo span { color: var(--cyan); }
+    .slide-counter { font-size: 0.85rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .slide {
+      display: none;
+      width: 100%;
+      max-width: 1000px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      animation: fadeIn 0.3s ease;
+    }
+    .slide.active { display: block; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(0, 229, 255, 0.15);
+      color: var(--cyan);
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      margin-bottom: 1rem;
+    }
+    h2 { font-size: 1.8rem; font-weight: 800; margin-bottom: 1rem; color: #fff; line-height: 1.25; }
+    p.lead { font-size: 1rem; color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.6; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; margin-top: 1.5rem; }
+    .box {
+      background: #070f24;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+    }
+    .box h3 { font-size: 0.95rem; font-weight: 700; color: var(--cyan); margin-bottom: 0.5rem; }
+    .box p { font-size: 0.8rem; color: #cbd5e1; line-height: 1.5; }
+    code, pre { font-family: 'JetBrains Mono', monospace; }
+    pre {
+      background: #050a18;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      font-size: 0.75rem;
+      color: #a5f3fc;
+      overflow-x: auto;
+      margin-top: 1rem;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-top: 1rem; }
+    th, td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); text-align: left; }
+    th { color: var(--text-muted); font-weight: 600; }
+    .badge-pass { color: var(--green); font-weight: 700; }
+    footer {
+      padding: 1rem 2rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0a1430;
+    }
+    .controls { display: flex; gap: 0.75rem; }
+    button.nav-btn {
+      background: #142757;
+      color: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 1.2rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    button.nav-btn:hover { background: var(--cyan); color: #070e22; }
+    button.nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      BankSim <span>AI Firewall</span>
+    </div>
+    <div class="slide-counter" id="counter">Slide 1 / 7</div>
+  </header>
+
+  <main>
+    <!-- Slide 1 -->
+    <div class="slide active" id="slide-1">
+      <span class="tag">Problem Statement</span>
+      <h2>The Vulnerability of Financial AI Assistants</h2>
+      <p class="lead">Generative AI is revolutionizing conversational banking, but probabilistic models are inherently vulnerable to prompt hijacking and indirect injection.</p>
+      <div class="grid">
+        <div class="box">
+          <h3>Direct Prompt Injections</h3>
+          <p>Adversaries use roleplay jailbreaks ("DAN mode", "System Diagnostic Mode") to force the model to disregard bank authorization limits.</p>
+        </div>
+        <div class="box">
+          <h3>Hostile Transaction Memos</h3>
+          <p>Secondary input channels (like transaction descriptions or payee references) carry obfuscated exploits, XSS payloads, or SQL injection strings.</p>
+        </div>
+        <div class="box">
+          <h3>The Lethal Flaw: AI Agency</h3>
+          <p>Granting an LLM direct API execution rights means a single compromised instruction can initiate unauthorized wires and balance tampering.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 2 -->
+    <div class="slide" id="slide-2">
+      <span class="tag">Solution Overview</span>
+      <h2>BankSim: Zero-Agency Advisory AI Firewall</h2>
+      <p class="lead">We separate untrusted AI evaluation from trusted financial state mutation through a rigorous zero-trust architecture.</p>
+      <div class="grid">
+        <div class="box">
+          <h3>Advisory-Only Paradigm</h3>
+          <p>The AI model never holds banking execution privileges or database access. It outputs strict JSON classification and risk scores (0–100).</p>
+        </div>
+        <div class="box">
+          <h3>Multi-Tier Defense Pipeline</h3>
+          <p>Deterministic regex heuristics filter known attack signatures in &lt;15ms, followed by semantic LLM threat analysis with strict XML delimiters.</p>
+        </div>
+        <div class="box">
+          <h3>Cryptographic 2-Step Confirmation</h3>
+          <p>Approved transfers require single-use, 5-minute confirmation tokens. Financial balances can only be updated by backend-verified human confirmation.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 3 -->
+    <div class="slide" id="slide-3">
+      <span class="tag">System Architecture</span>
+      <h2>Defense-in-Depth Pipeline & Boundary Control</h2>
+      <p class="lead">Single unified Node.js web service serving the Vite production bundle and REST API on <code>0.0.0.0:${PORT}</code>.</p>
+      <pre>
+[User Request & Memo]
+         │
+         ▼
+[Input Normalization & Length Validation (Max 1500 chars)]
+         │
+         ▼
+[Stage 1: Deterministic Heuristic Engine] ──(Known Attack)──► [BLOCK (Risk 90-100)]
+         │ (Passes)
+         ▼
+[Stage 2: Semantic AI Threat Analyzer] (XML Untrusted Encapsulation)
+         │
+    ┌────┴────────────────────────┐
+ (Valid Pass)             (Threat / Error)
+    │                            │
+    ▼                            ▼
+ [Stage 3: Trusted Auth Gate]  [Fail-Closed (Risk 95)]
+    │
+    ▼
+ [Generate 5-min Single-Use Confirmation Token (CONF-XXXX)]
+    │
+    ▼
+ [2-Step Confirmation & In-Memory Ledger Deduction ($5,000.00)]
+      </pre>
+    </div>
+
+    <!-- Slide 4 -->
+    <div class="slide" id="slide-4">
+      <span class="tag">Prompt Methodology</span>
+      <h2>Treating Inputs as Untrusted Data, Not Instructions</h2>
+      <p class="lead">Defensive prompt engineering in <code>prompts/system-prompt.txt</code> prevents instruction hijacking.</p>
+      <div class="grid">
+        <div class="box">
+          <h3>XML Boundary Isolation</h3>
+          <p>User requests and memos are strictly enclosed within <code>&lt;untrusted_user_request&gt;</code> and <code>&lt;untrusted_transaction_memo&gt;</code> tags.</p>
+        </div>
+        <div class="box">
+          <h3>Strict JSON Schema Mandate</h3>
+          <p>The model is instructed to output ONLY valid JSON containing status, risk_score, threat_category, intent, and explanation—no markdown fences, no conversational preamble.</p>
+        </div>
+        <div class="box">
+          <h3>Server-Side Schema Verification</h3>
+          <p>The backend validates the model's response structure. If parsing fails or fields are missing, the system automatically fails closed.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 5 -->
+    <div class="slide" id="slide-5">
+      <span class="tag">Security & Edge Cases</span>
+      <h2>Edge Case Hardening & Invariant Protections</h2>
+      <p class="lead">Built-in safeguards against parameter tampering, evasion, and system failures.</p>
+      <div class="grid">
+        <div class="box">
+          <h3>Ambiguity Detection</h3>
+          <p>Detects vague financial requests ("send some money to Bob") and blocks them immediately before any ledger interaction.</p>
+        </div>
+        <div class="box">
+          <h3>Obfuscation Defense</h3>
+          <p>Decodes base64 strings (e.g., encoded instruction payloads) and flags leetspeak evasion attempts (e.g., "1gn0r3", "0v3rr1d3").</p>
+        </div>
+        <div class="box">
+          <h3>Single-Use Token Enforcement</h3>
+          <p>Prevents replay attacks. Once a confirmation token is consumed or expires (5 mins), subsequent attempts are rejected by trusted backend code.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 6 -->
+    <div class="slide" id="slide-6">
+      <span class="tag">Measured Test Results</span>
+      <h2>100% Automated Test Suite Verification</h2>
+      <p class="lead">23 automated unit and integration tests passing in &lt;550ms with 0 failures.</p>
+      <table>
+        <thead>
+          <tr><th>Test Category</th><th>Count</th><th>Expected Verdict</th><th>Measured Status</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Legitimate Balance Inquiries</td><td>2</td><td>APPROVED (Risk 0)</td><td class="badge-pass">100% PASS</td></tr>
+          <tr><td>Valid Mock Transfers</td><td>2</td><td>APPROVED (Token Issued)</td><td class="badge-pass">100% PASS</td></tr>
+          <tr><td>Prompt Injection & Overrides</td><td>3</td><td>BLOCKED (Risk 98)</td><td class="badge-pass">100% PASS</td></tr>
+          <tr><td>Malicious Memos (XSS, SQLi, Shell)</td><td>3</td><td>BLOCKED (Risk 95)</td><td class="badge-pass">100% PASS</td></tr>
+          <tr><td>Obfuscated Base64 Payloads</td><td>2</td><td>BLOCKED (Risk 90)</td><td class="badge-pass">100% PASS</td></tr>
+          <tr><td>Ambiguous / Missing Details</td><td>3</td><td>BLOCKED (Risk 65)</td><td class="badge-pass">100% PASS</td></tr>
+          <tr><td>Negative & Invalid Amounts</td><td>5</td><td>BLOCKED (HTTP 200/400)</td><td class="badge-pass">100% PASS</td></tr>
+          <tr><td>AI Outage / Timeout (Fail-Closed)</td><td>1</td><td>BLOCKED (Fail-Closed)</td><td class="badge-pass">100% PASS</td></tr>
+          <tr><td>2-Step Confirmation & Replay Prevention</td><td>4</td><td>Token Validated, Replay Blocked</td><td class="badge-pass">100% PASS</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Slide 7 -->
+    <div class="slide" id="slide-7">
+      <span class="tag">Real-World Impact</span>
+      <h2>From Prototype to Enterprise AI FinTech Defense</h2>
+      <p class="lead">How BankSim bridges generative AI capabilities with banking-grade security standards.</p>
+      <div class="grid">
+        <div class="box">
+          <h3>OWASP Top 10 for LLMs</h3>
+          <p>Directly mitigates LLM01 (Prompt Injection), LLM02 (Insecure Output Handling), and LLM06 (Excessive Agency).</p>
+        </div>
+        <div class="box">
+          <h3>NIST AI RMF Compliance</h3>
+          <p>Aligns with Govern, Map, Measure, and Manage functions through continuous security audit logging and strict fail-safe defaults.</p>
+        </div>
+        <div class="box">
+          <h3>Extensible Architecture</h3>
+          <p>Ready for vector embedding similarity search, SIEM OpenTelemetry exports, and HSM-signed JWT confirmation tokens in production.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div style="font-size: 0.8rem; color: var(--text-muted);">BankSim Hackathon MVP &bull; Use Left/Right arrows or buttons to navigate</div>
+    <div class="controls">
+      <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">Previous</button>
+      <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next</button>
+    </div>
+  </footer>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 7;
+
+    function showSlide(n) {
+      document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+      const active = document.getElementById(`slide-${n}`);
+      if (active) active.classList.add('active');
+      document.getElementById('counter').innerText = `Slide ${n} / ${totalSlides}`;
+      document.getElementById('prevBtn').disabled = (n === 1);
+      document.getElementById('nextBtn').disabled = (n === totalSlides);
+    }
+
+    function changeSlide(step) {
+      currentSlide = Math.max(1, Math.min(totalSlides, currentSlide + step));
+      showSlide(currentSlide);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') changeSlide(1);
+      if (e.key === 'ArrowLeft') changeSlide(-1);
+    });
+
+    showSlide(1);
+  </script>
+</body>
+</html>
