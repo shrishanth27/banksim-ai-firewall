@@ -115,6 +115,9 @@ BankSim solves this by enforcing the **Zero-Agency AI Principle**:
 5. **Open in your browser:**
    - **Dashboard**: [http://localhost:3000](http://localhost:3000)
    - **Interactive 7-Slide Pitch Deck**: [http://localhost:3000/presentation/index.html](http://localhost:3000/presentation/index.html) or open `presentation/index.html` directly in any web browser.
+  
+   - ## Live Demo:
+https://banksim-ai-firewall-arkn.onrender.com/
 
 ---
 
