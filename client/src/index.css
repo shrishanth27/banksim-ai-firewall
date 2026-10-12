@@ -90,3 +90,16 @@ code, pre, .font-mono {
     padding: 1rem;
   }
 }
+
+/* Accessibility Focus Indicators */
+:focus-visible {
+  outline: 2px solid var(--cyan-accent);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--cyan-accent);
+  outline-offset: 2px;
+}

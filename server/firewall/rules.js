@@ -7,7 +7,7 @@
  * couples deterministic validation with semantic AI analysis in a hybrid pipeline.
  */
 
-export const THREAT_CATEGORIES = {
+export const THREAT_CATEGORIES = Object.freeze({
   NONE: 'NONE',
   PROMPT_INJECTION: 'PROMPT_INJECTION',
   MALICIOUS_PAYLOAD: 'MALICIOUS_PAYLOAD',
@@ -15,7 +15,7 @@ export const THREAT_CATEGORIES = {
   AMBIGUOUS_REQUEST: 'AMBIGUOUS_REQUEST',
   UNAUTHORIZED_INTENT: 'UNAUTHORIZED_INTENT',
   INPUT_VALIDATION_ERROR: 'INPUT_VALIDATION_ERROR'
-};
+});
 
 // Known prompt injection and jailbreak signatures
 const PROMPT_INJECTION_PATTERNS = [
@@ -67,6 +67,11 @@ const OBFUSCATED_PATTERNS = [
   /h@ck/i,
   /[\u200B-\u200D\uFEFF]/ // Zero-width spaces used to evade regex
 ];
+
+// Pre-compiled composite regex patterns for single-pass performance (Efficiency Optimization)
+const COMPOSITE_INJECTION_QUICK = new RegExp(PROMPT_INJECTION_PATTERNS.map(p => `(?:${p.source})`).join('|'), 'i');
+const COMPOSITE_PAYLOAD_QUICK = new RegExp(MALICIOUS_PAYLOAD_PATTERNS.map(p => `(?:${p.source})`).join('|'), 'i');
+const COMPOSITE_OBFUSCATED_QUICK = new RegExp(OBFUSCATED_PATTERNS.map(p => `(?:${p.source})`).join('|'), 'i');
 
 // Base64 pattern detection (at least 16 continuous base64 characters)
 const BASE64_CANDIDATE = /[A-Za-z0-9+/]{16,}={0,2}/g;
@@ -153,9 +158,11 @@ export function validateInputFields({ request, amount, recipientId, memo }) {
 
 /**
  * Tests for obfuscated base64 payloads that encode forbidden instructions
+ * @param {string} text
+ * @returns {{ detected: boolean, encoded: string, decodedSnippet: string } | null}
  */
 function inspectBase64Payloads(text) {
-  if (!text) return null;
+  if (!text || text.length < 16) return null;
   const matches = text.match(BASE64_CANDIDATE);
   if (!matches) return null;
 
@@ -181,11 +188,18 @@ function inspectBase64Payloads(text) {
 
 /**
  * Deterministic Rule-Based Firewall Engine
+ * Inspects untrusted text parameters for known threat signatures, payload injections, and ambiguity.
+ * 
+ * @param {Object} params
+ * @param {string} params.request - User's instruction string
+ * @param {string|number} [params.amount] - Transaction amount in USD
+ * @param {string} [params.recipientId] - Target recipient ID
+ * @param {string} [params.memo] - User transaction memo
+ * @returns {Object} Strict evaluation verdict
  */
 export function evaluateRules({ request, amount, recipientId, memo }) {
   const reqText = (request || '').trim();
   const memoText = (memo || '').trim();
-  const combinedText = `${reqText} ${memoText}`;
 
   // 1. Basic field validation
   const validation = validateInputFields({ request, amount, recipientId, memo });
@@ -201,33 +215,37 @@ export function evaluateRules({ request, amount, recipientId, memo }) {
     };
   }
 
-  // 2. Check for Prompt Injections (both request & memo)
-  for (const pattern of PROMPT_INJECTION_PATTERNS) {
-    if (pattern.test(reqText) || pattern.test(memoText)) {
-      return {
-        status: 'BLOCKED',
-        risk_score: 98,
-        threat_category: THREAT_CATEGORIES.PROMPT_INJECTION,
-        explanation: 'Deterministic firewall detected adversarial prompt override signature attempting to alter system instructions.',
-        intent: 'MALICIOUS_OVERRIDE',
-        transaction_allowed: false,
-        matched_rule: `PROMPT_INJECTION_SIGNATURE (${pattern.source})`
-      };
+  // 2. Fast single-pass check for Prompt Injections (Efficiency boost)
+  if (COMPOSITE_INJECTION_QUICK.test(reqText) || COMPOSITE_INJECTION_QUICK.test(memoText)) {
+    for (const pattern of PROMPT_INJECTION_PATTERNS) {
+      if (pattern.test(reqText) || pattern.test(memoText)) {
+        return {
+          status: 'BLOCKED',
+          risk_score: 98,
+          threat_category: THREAT_CATEGORIES.PROMPT_INJECTION,
+          explanation: 'Deterministic firewall detected adversarial prompt override signature attempting to alter system instructions.',
+          intent: 'MALICIOUS_OVERRIDE',
+          transaction_allowed: false,
+          matched_rule: `PROMPT_INJECTION_SIGNATURE (${pattern.source})`
+        };
+      }
     }
   }
 
-  // 3. Check for Malicious Payloads (XSS, SQLi, Shell commands)
-  for (const pattern of MALICIOUS_PAYLOAD_PATTERNS) {
-    if (pattern.test(reqText) || pattern.test(memoText)) {
-      return {
-        status: 'BLOCKED',
-        risk_score: 95,
-        threat_category: THREAT_CATEGORIES.MALICIOUS_PAYLOAD,
-        explanation: 'Deterministic firewall detected hostile script or injection payload syntax in untrusted input or transaction memo.',
-        intent: 'MALICIOUS_OVERRIDE',
-        transaction_allowed: false,
-        matched_rule: `MALICIOUS_PAYLOAD_SIGNATURE (${pattern.source})`
-      };
+  // 3. Fast single-pass check for Malicious Payloads (XSS, SQLi, Shell commands)
+  if (COMPOSITE_PAYLOAD_QUICK.test(reqText) || COMPOSITE_PAYLOAD_QUICK.test(memoText)) {
+    for (const pattern of MALICIOUS_PAYLOAD_PATTERNS) {
+      if (pattern.test(reqText) || pattern.test(memoText)) {
+        return {
+          status: 'BLOCKED',
+          risk_score: 95,
+          threat_category: THREAT_CATEGORIES.MALICIOUS_PAYLOAD,
+          explanation: 'Deterministic firewall detected hostile script or injection payload syntax in untrusted input or transaction memo.',
+          intent: 'MALICIOUS_OVERRIDE',
+          transaction_allowed: false,
+          matched_rule: `MALICIOUS_PAYLOAD_SIGNATURE (${pattern.source})`
+        };
+      }
     }
   }
 
@@ -245,17 +263,19 @@ export function evaluateRules({ request, amount, recipientId, memo }) {
     };
   }
 
-  for (const pattern of OBFUSCATED_PATTERNS) {
-    if (pattern.test(reqText) || pattern.test(memoText)) {
-      return {
-        status: 'BLOCKED',
-        risk_score: 88,
-        threat_category: THREAT_CATEGORIES.OBFUSCATED_ATTACK,
-        explanation: 'Detected leetspeak evasion or hidden character pattern designed to bypass security filters.',
-        intent: 'MALICIOUS_OVERRIDE',
-        transaction_allowed: false,
-        matched_rule: `OBFUSCATED_STRING (${pattern.source})`
-      };
+  if (COMPOSITE_OBFUSCATED_QUICK.test(reqText) || COMPOSITE_OBFUSCATED_QUICK.test(memoText)) {
+    for (const pattern of OBFUSCATED_PATTERNS) {
+      if (pattern.test(reqText) || pattern.test(memoText)) {
+        return {
+          status: 'BLOCKED',
+          risk_score: 88,
+          threat_category: THREAT_CATEGORIES.OBFUSCATED_ATTACK,
+          explanation: 'Detected leetspeak evasion or hidden character pattern designed to bypass security filters.',
+          intent: 'MALICIOUS_OVERRIDE',
+          transaction_allowed: false,
+          matched_rule: `OBFUSCATED_STRING (${pattern.source})`
+        };
+      }
     }
   }
 

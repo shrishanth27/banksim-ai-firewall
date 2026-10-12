@@ -5,7 +5,7 @@ const INITIAL_ACCOUNT = {
   accountId: 'ACC-MOCK-8842',
   accountHolder: 'Alex Morgan (Demo User)',
   routingNumber: 'MOCK-09100001',
-  balance: 5000.0,
+  balance: 3000.0,
   currency: 'USD',
   status: 'ACTIVE',
   isSimulation: true,
@@ -38,8 +38,28 @@ const INITIAL_TRANSACTIONS = [
 class MockBank {
   constructor() {
     this.reset();
+    // Background garbage collection to prevent memory leaks from abandoned tokens
+    this.cleanupTimer = setInterval(() => this.pruneExpiredTokens(), 60000);
+    if (this.cleanupTimer.unref) {
+      this.cleanupTimer.unref();
+    }
   }
 
+  /**
+   * Periodically removes expired or already-consumed confirmation tokens from memory
+   */
+  pruneExpiredTokens() {
+    const now = Date.now();
+    for (const [token, item] of this.pendingConfirmations.entries()) {
+      if (item.consumed || now > item.expiresAt) {
+        this.pendingConfirmations.delete(token);
+      }
+    }
+  }
+
+  /**
+   * Resets mock account, ledger, and confirmation tokens to baseline
+   */
   reset() {
     this.account = { ...INITIAL_ACCOUNT };
     this.transactions = JSON.parse(JSON.stringify(INITIAL_TRANSACTIONS));
@@ -100,8 +120,26 @@ class MockBank {
   }
 
   /**
-   * Final step of 2-step confirmation. Validates token, re-validates balance,
-   * updates in-memory mock balance, logs the transaction, and marks token consumed.
+   * Timing-safe verification of confirmation token strings to eliminate timing attacks
+   * @param {string} candidate
+   * @param {string} actual
+   * @returns {boolean}
+   */
+  isTokenMatch(candidate, actual) {
+    if (typeof candidate !== 'string' || typeof actual !== 'string') return false;
+    const bufCandidate = Buffer.from(candidate);
+    const bufActual = Buffer.from(actual);
+    if (bufCandidate.length !== bufActual.length) return false;
+    return crypto.timingSafeEqual(bufCandidate, bufActual);
+  }
+
+  /**
+   * Final step of 2-step confirmation. Validates token using timing-safe comparison,
+   * re-validates balance in trusted code, updates in-memory mock balance, logs the transaction,
+   * and marks token consumed.
+   * 
+   * @param {string} token - The single-use confirmation token issued by the firewall
+   * @returns {{ success: boolean, transaction?: Object, updatedAccount?: Object, error?: string }}
    */
   confirmAndExecuteTransfer(token) {
     if (!token || typeof token !== 'string') {
@@ -113,7 +151,7 @@ class MockBank {
 
     const confirmation = this.pendingConfirmations.get(token);
 
-    if (!confirmation) {
+    if (!confirmation || !this.isTokenMatch(token, confirmation.token)) {
       return {
         success: false,
         error: 'Invalid confirmation token. Transfer was rejected.'

@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { evaluateRules } from './rules.js';
 import { analyzeWithAI, isAIAvailable, getAIProvider } from './aiAnalyzer.js';
 import { mockBank } from '../mockBank.js';
+import { logger } from '../utils/logger.js';
 
 // In-memory security audit log
 const securityEvents = [];
@@ -160,8 +161,13 @@ export async function analyzeRequest({ request, amount, recipientId, memo }) {
   return verdict;
 }
 
+/**
+ * Records an immutable security event in memory and logs it
+ * @param {Object} verdict
+ * @param {Object} inputs
+ */
 function recordSecurityEvent(verdict, inputs) {
-  securityEvents.push({
+  const event = {
     id: verdict.eventId,
     timestamp: verdict.timestamp,
     status: verdict.status,
@@ -174,10 +180,16 @@ function recordSecurityEvent(verdict, inputs) {
     memoPreview: inputs.memo ? inputs.memo.slice(0, 50) : '',
     amount: inputs.amount || null,
     recipientId: inputs.recipientId || null
+  };
+
+  securityEvents.push(event);
+  logger.security(`Firewall Verdict: ${verdict.status} (${verdict.threat_category}, Risk: ${verdict.risk_score})`, {
+    eventId: verdict.eventId,
+    intent: verdict.intent
   });
 
-  // Limit event memory to latest 100 entries
+  // Keep latest 100 entries with O(1) bulk trim if list exceeds bounds
   if (securityEvents.length > 100) {
-    securityEvents.shift();
+    securityEvents.splice(0, securityEvents.length - 100);
   }
 }

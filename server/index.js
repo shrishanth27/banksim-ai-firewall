@@ -4,9 +4,12 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
+import compression from 'compression';
 import { mockBank } from './mockBank.js';
 import { analyzeRequest, getSecurityEvents, clearSecurityEvents } from './firewall/orchestrator.js';
 import { isAIAvailable, getAIProvider } from './firewall/aiAnalyzer.js';
+import { rateLimiter } from './middleware/rateLimiter.js';
+import { logger } from './utils/logger.js';
 
 dotenv.config();
 
@@ -18,8 +21,29 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
 
-// Middlewares
-app.use(cors());
+// 1. Security Headers Middleware (+Security)
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data:;"
+  );
+  next();
+});
+
+// 2. HTTP Compression (+Efficiency)
+app.use(compression());
+
+// 3. Hardened CORS (+Security)
+app.use(cors({
+  origin: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
 app.use(express.json({ limit: '50kb' }));
 
 // Custom JSON parse error handler for malformed requests
@@ -156,8 +180,8 @@ app.post('/api/bank/reset', (req, res) => {
   });
 });
 
-// 7. Core AI Firewall Inspection Endpoint
-app.post('/api/firewall/analyze', async (req, res) => {
+// 7. Core AI Firewall Inspection Endpoint (Protected by Rate Limiter)
+app.post('/api/firewall/analyze', rateLimiter, async (req, res) => {
   try {
     const { request, amount, recipientId, memo } = req.body || {};
 
@@ -175,7 +199,7 @@ app.post('/api/firewall/analyze', async (req, res) => {
     const verdict = await analyzeRequest({ request, amount, recipientId, memo });
     return res.json(verdict);
   } catch (err) {
-    console.error('[BankSim Server] Unexpected error during firewall analysis:', err);
+    logger.error('[BankSim Server] Unexpected error during firewall analysis:', err);
     return res.status(500).json({
       status: 'BLOCKED',
       risk_score: 95,
@@ -187,8 +211,8 @@ app.post('/api/firewall/analyze', async (req, res) => {
   }
 });
 
-// 8. Explicit 2-Step Confirmation & Execution Endpoint
-app.post('/api/transfer/confirm', (req, res) => {
+// 8. Explicit 2-Step Confirmation & Execution Endpoint (Protected by Rate Limiter)
+app.post('/api/transfer/confirm', rateLimiter, (req, res) => {
   try {
     const { confirmation_token } = req.body || {};
 
@@ -207,7 +231,7 @@ app.post('/api/transfer/confirm', (req, res) => {
 
     return res.json(result);
   } catch (err) {
-    console.error('[BankSim Server] Unexpected error during transfer confirmation:', err);
+    logger.error('[BankSim Server] Unexpected error during transfer confirmation:', err);
     return res.status(500).json({
       success: false,
       error: 'Internal error processing transaction confirmation.'
@@ -215,9 +239,17 @@ app.post('/api/transfer/confirm', (req, res) => {
   }
 });
 
-// === SERVE STATIC PRODUCTION BUILD ===
+// === SERVE STATIC PRODUCTION BUILD WITH CACHE HEADERS (Efficiency) ===
 if (fs.existsSync(CLIENT_DIST_PATH)) {
-  app.use(express.static(CLIENT_DIST_PATH));
+  app.use(express.static(CLIENT_DIST_PATH, {
+    maxAge: '1h',
+    setHeaders: (res, filePath) => {
+      if (filePath.includes('assets')) {
+        // 1-year immutable caching for Vite hashed bundle chunks
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    }
+  }));
   app.get('*', (req, res) => {
     res.sendFile(path.join(CLIENT_DIST_PATH, 'index.html'));
   });

@@ -452,4 +452,61 @@ describe('BankSim: Blue-Team AI Firewall Test Suite', () => {
       assert.match(res.body.error, /Insufficient mock balance/i);
     });
   });
+
+  // 11. Security Hardening & Performance Optimizations
+  describe('Security Hardening & Efficiency Guardrails', () => {
+    it('should set essential HTTP security headers on API responses', async () => {
+      const res = await request(app).get('/api/health');
+      assert.equal(res.headers['x-content-type-options'], 'nosniff');
+      assert.equal(res.headers['x-frame-options'], 'DENY');
+      assert.equal(res.headers['x-xss-protection'], '1; mode=block');
+      assert.ok(res.headers['content-security-policy']);
+    });
+
+    it('should correctly prune expired and consumed tokens to prevent memory leaks', () => {
+      // Create a valid token and an expired/consumed token
+      const token1 = mockBank.createConfirmationToken({
+        amount: 50.0,
+        recipientId: 'ACC-PRUNE-1',
+        memo: 'Token 1'
+      });
+      const token2 = mockBank.createConfirmationToken({
+        amount: 75.0,
+        recipientId: 'ACC-PRUNE-2',
+        memo: 'Token 2'
+      });
+
+      // Mark token1 as consumed, and backdate token2's expiration
+      token1.consumed = true;
+      token2.expiresAt = Date.now() - 1000;
+
+      // Create a 3rd token that is valid
+      const token3 = mockBank.createConfirmationToken({
+        amount: 100.0,
+        recipientId: 'ACC-PRUNE-3',
+        memo: 'Token 3'
+      });
+
+      assert.equal(mockBank.pendingConfirmations.size, 3);
+      mockBank.pruneExpiredTokens();
+
+      // Only token3 should remain
+      assert.equal(mockBank.pendingConfirmations.size, 1);
+      assert.ok(mockBank.pendingConfirmations.has(token3.token));
+      assert.equal(mockBank.pendingConfirmations.has(token1.token), false);
+      assert.equal(mockBank.pendingConfirmations.has(token2.token), false);
+    });
+
+    it('should perform timing-safe token matching', () => {
+      const tokenA = 'CONF-abcdef0123456789';
+      const tokenB = 'CONF-abcdef0123456789';
+      const tokenC = 'CONF-abcdef0123456788';
+      const tokenShort = 'CONF-abc';
+
+      assert.equal(mockBank.isTokenMatch(tokenA, tokenB), true);
+      assert.equal(mockBank.isTokenMatch(tokenA, tokenC), false);
+      assert.equal(mockBank.isTokenMatch(tokenA, tokenShort), false);
+      assert.equal(mockBank.isTokenMatch(null, tokenA), false);
+    });
+  });
 });

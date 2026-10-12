@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { THREAT_CATEGORIES } from './rules.js';
+import { logger } from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,7 +18,7 @@ function loadSystemPrompt() {
       return systemPromptCached;
     }
   } catch (err) {
-    console.error('[BankSim Firewall] Error reading system prompt file:', err.message);
+    logger.error('[BankSim Firewall] Error reading system prompt file:', err);
   }
   return 'You are BankSim Blue-Team AI Firewall. Evaluate requests and return JSON.';
 }
@@ -227,7 +228,7 @@ Respond strictly with the required JSON schema.
     try {
       parsed = JSON.parse(cleanJson);
     } catch (parseErr) {
-      console.warn('[BankSim Firewall] AI output could not be parsed as JSON:', parseErr.message, cleanJson);
+      logger.warn('[BankSim Firewall] AI output could not be parsed as JSON:', { error: parseErr.message, snippet: cleanJson.slice(0, 100) });
       return {
         evaluated: true,
         mode: 'HYBRID_AI',
@@ -243,7 +244,7 @@ Respond strictly with the required JSON schema.
     // Server-side output schema validation
     const validation = validateAIResponseSchema(parsed);
     if (!validation.valid) {
-      console.warn('[BankSim Firewall] AI output schema validation failed:', validation.error);
+      logger.warn('[BankSim Firewall] AI output schema validation failed:', { error: validation.error });
       return {
         evaluated: true,
         mode: 'HYBRID_AI',
@@ -262,7 +263,7 @@ Respond strictly with the required JSON schema.
       ...validation.data
     };
   } catch (apiError) {
-    console.error(`[BankSim Firewall] Error during AI evaluation (${provider}):`, apiError.message);
+    logger.error(`[BankSim Firewall] Error during AI evaluation (${provider}):`, apiError);
 
     // Fail-Closed Policy (Requirement 9)
     return {

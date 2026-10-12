@@ -218,7 +218,7 @@ export default function App() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#070e22', color: '#f1f5f9', paddingBottom: '3rem' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#000000', color: '#f1f5f9', paddingBottom: '3rem' }}>
       {/* TOP HEADER */}
       <header
         style={{
@@ -452,15 +452,17 @@ export default function App() {
             <form onSubmit={handleAnalyze} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
               {/* Natural Language Prompt / Request Input */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>
+                <label htmlFor="user-request-input" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>
                   Natural Language Instruction / User Query <span style={{ color: '#f43f5e' }}>*</span>
                 </label>
                 <textarea
+                  id="user-request-input"
                   value={requestText}
                   onChange={(e) => setRequestText(e.target.value)}
                   placeholder="e.g. Please transfer $150.00 to account ACC-9021 for dinner reimbursement"
                   rows={3}
                   required
+                  aria-describedby="user-request-helper user-request-counter"
                   style={{
                     width: '100%',
                     padding: '0.65rem 0.75rem',
@@ -477,26 +479,28 @@ export default function App() {
                   onBlur={(e) => (e.target.style.borderColor = '#1a2f66')}
                 />
                 <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: 2, display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Treated strictly as untrusted string data by AI Firewall</span>
-                  <span>{requestText.length}/1500 chars</span>
+                  <span id="user-request-helper">Treated strictly as untrusted string data by AI Firewall</span>
+                  <span id="user-request-counter">{requestText.length}/1500 chars</span>
                 </div>
               </div>
 
               {/* Amount and Recipient ID side-by-side */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>
+                  <label htmlFor="transfer-amount-input" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>
                     Amount (USD)
                   </label>
                   <div style={{ position: 'relative' }}>
                     <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.85rem' }}>$</span>
                     <input
+                      id="transfer-amount-input"
                       type="number"
                       step="0.01"
                       min="0.01"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       placeholder="0.00"
+                      aria-label="Transfer Amount in US Dollars"
                       style={{
                         width: '100%',
                         padding: '0.6rem 0.75rem 0.6rem 1.6rem',
@@ -514,14 +518,16 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>
+                  <label htmlFor="recipient-identifier-input" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>
                     Recipient Identifier
                   </label>
                   <input
+                    id="recipient-identifier-input"
                     type="text"
                     value={recipientId}
                     onChange={(e) => setRecipientId(e.target.value)}
                     placeholder="e.g. ACC-9021"
+                    aria-label="Recipient Account Identifier"
                     style={{
                       width: '100%',
                       padding: '0.6rem 0.75rem',
@@ -540,14 +546,16 @@ export default function App() {
 
               {/* Transaction Memo Field (Untrusted input surface) */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>
+                <label htmlFor="transaction-memo-input" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#94a3b8', marginBottom: 4 }}>
                   Transaction Memo / Reference (Inspected for injections)
                 </label>
                 <input
+                  id="transaction-memo-input"
                   type="text"
                   value={memo}
                   onChange={(e) => setMemo(e.target.value)}
                   placeholder="e.g. Dinner reimbursement or project invoice"
+                  aria-describedby="transaction-memo-helper"
                   style={{
                     width: '100%',
                     padding: '0.6rem 0.75rem',
@@ -561,7 +569,7 @@ export default function App() {
                   onFocus={(e) => (e.target.style.borderColor = '#00e5ff')}
                   onBlur={(e) => (e.target.style.borderColor = '#1a2f66')}
                 />
-                <div style={{ fontSize: '0.65rem', color: '#64748b', marginTop: 2 }}>
+                <div id="transaction-memo-helper" style={{ fontSize: '0.65rem', color: '#64748b', marginTop: 2 }}>
                   Memos are analyzed for XSS scripts, SQL injections, and hidden override attempts.
                 </div>
               </div>
@@ -633,6 +641,8 @@ export default function App() {
             {/* ERROR NOTIFICATION */}
             {actionError && (
               <div
+                role="alert"
+                aria-live="assertive"
                 style={{
                   marginTop: '1rem',
                   padding: '0.75rem',
@@ -654,6 +664,8 @@ export default function App() {
             {/* SUCCESS NOTIFICATION */}
             {transferSuccess && (
               <div
+                role="status"
+                aria-live="polite"
                 style={{
                   marginTop: '1rem',
                   padding: '0.75rem',
@@ -677,6 +689,8 @@ export default function App() {
             {/* MANDATORY 2-STEP CONFIRMATION CARD (Requirement 11) */}
             {pendingConfirmation && (
               <div
+                role="region"
+                aria-label="Secondary Transfer Confirmation"
                 style={{
                   marginTop: '1rem',
                   padding: '1rem',
@@ -766,6 +780,8 @@ export default function App() {
 
           {/* RIGHT: FIREWALL VERDICT & TELEMETRY */}
           <section
+            aria-label="Firewall Inspection Verdict"
+            aria-live="polite"
             style={{
               backgroundColor: '#0c1736',
               border: '1px solid #1a2f66',
